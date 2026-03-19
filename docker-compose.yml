@@ -1,0 +1,158 @@
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:10.11.6ubu2404-ls24
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+    volumes:
+      - ./configuration/jellyfin/library:/config
+      - ./content/media:/data
+    ports:
+      - 8096:8096
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:6.0.4.10291-ls295
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+    volumes:
+      - ./configuration/radarr:/config
+      - ./content:/data
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.16.2944-ls304
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+    volumes:
+      - ./configuration/sonarr:/config
+      - ./content:/data
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:2.3.0.5236-ls139
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+      - DISABLE_IPV6=true
+    volumes:
+      - ./configuration/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:v1.5.6-ls341
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+    volumes:
+      - ./configuration/bazarr:/config
+      - ./content:/data
+    ports:
+      - 6767:6767
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:5.1.4-r2-ls445
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+    volumes:
+      - ./configuration/qbittorrent:/config
+      - ./content:/data
+    ports:
+      - 8080:8080
+      - 50561:50561     # Puerto de escucha TCP
+      - 50561:50561/udp # Puerto de escucha UDP
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  nginx:
+    image: jc21/nginx-proxy-manager:2.14.0
+    container_name: nginx
+    volumes:
+      - ./configuration/nginx/data:/data
+      - ./configuration/nginx/letsencrypt:/etc/letsencrypt
+    ports:
+      - 80:80
+      - 443:443
+      - 81:81
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v1.11.0
+    container_name: homepage
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: homepage.lasaroh.com
+    ports:
+      - 3000:3000
+    volumes:
+      - ./configuration/homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - jellyfin
+      - seerr
+      - prowlarr
+      - radarr
+      - sonarr
+      - bazarr
+      - qbittorrent
+      - nginx
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  seerr:
+    image: ghcr.io/seerr-team/seerr:v3.1.0
+    container_name: seerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=Europe/Madrid
+      - PORT=5056
+    ports:
+      - 5056:5056
+    volumes:
+      - ./configuration/seerr/config:/app/config
+    restart: unless-stopped
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge
+    name: media-network
