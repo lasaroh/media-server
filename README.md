@@ -8,15 +8,15 @@ Un stack completo de servidor multimedia autohospedado basado en Docker, con ges
 
 | Servicio | Imagen | Puerto | Descripción |
 |---|---|---|---|
-| **Jellyfin** | `lscr.io/linuxserver/jellyfin:0.11.6ubu2404-ls24` | `8096` | Servidor multimedia — streaming de películas, series y música |
-| **Radarr** | `lscr.io/linuxserver/radarr:6.0.4.10291-ls295` | `7878` | Gestor automático de películas |
-| **Sonarr** | `lscr.io/linuxserver/sonarr:4.0.16.2944-ls304` | `8989` | Gestor automático de series |
-| **Prowlarr** | `lscr.io/linuxserver/prowlarr:2.3.0.5236-ls139` | `9696` | Gestor de indexadores para Radarr/Sonarr |
-| **Bazarr** | `lscr.io/linuxserver/bazarr:v1.5.6-ls341` | `6767` | Descarga automática de subtítulos |
-| **qBittorrent** | `lscr.io/linuxserver/qbittorrent:5.1.4-r2-ls445` | `8080` | Cliente de torrents |
-| **Nginx Proxy Manager** | `jc21/nginx-proxy-manager:2.14.0` | `80`, `443`, `81` | Proxy inverso con soporte SSL/TLS |
-| **Homepage** | `ghcr.io/gethomepage/homepage:v1.11.0` | `3000` | Dashboard de inicio unificado |
-| **Seerr** | `ghcr.io/seerr-team/seerr:v3.1.0` | `5056` | Portal de solicitudes de contenido |
+| **Jellyfin** | `lscr.io/linuxserver/jellyfin` | `8096` | Servidor multimedia — streaming de películas, series y música |
+| **Radarr** | `lscr.io/linuxserver/radarr` | `7878` | Gestor automático de películas |
+| **Sonarr** | `lscr.io/linuxserver/sonarr` | `8989` | Gestor automático de series |
+| **Prowlarr** | `lscr.io/linuxserver/prowlarr` | `9696` | Gestor de indexadores para Radarr/Sonarr |
+| **Bazarr** | `lscr.io/linuxserver/bazarr` | `6767` | Descarga automática de subtítulos |
+| **qBittorrent** | `lscr.io/linuxserver/qbittorrent` | `8080` | Cliente de torrents |
+| **Nginx Proxy Manager** | `jc21/nginx-proxy-manager` | `80`, `443`, `81` | Proxy inverso con soporte SSL/TLS |
+| **Homepage** | `ghcr.io/gethomepage/homepage` | `3000` | Dashboard de inicio unificado |
+| **Seerr** | `ghcr.io/seerr-team/seerr` | `5056` | Portal de solicitudes de contenido |
 
 ---
 
@@ -36,39 +36,69 @@ media-server/
 │   ├── homepage/
 │   └── seerr/
 └── content/
-    ├── media/                # Sonarr & Radarr se encargan de hacer un hardlink a esta carpeta
-    │   ├── movies/           # Películas (biblioteca leída desde Jellyfin)
-    │   └── series/           # Series (biblioteca leída desde Jellyfin)
-    |   └── MiRSS/            # Serie en emisión que descarga los nuevos capítulos en cuanto se publican en el tracker
+    ├── media/                # Biblioteca de medios consumida por Jellyfin.
+    │   ├── movies/
+    │   └── series/
+    |   └── MiRSS/
     └── torrents/             # Carpeta donde qbittorrent descarga el contenido y lo sedea a otros usuarios del enjambre.
-        ├── movies/           # Descargas de películas en curso (Radarr)
-        ├── tv/               # Descargas de series en curso (Sonarr)
-        └── torrents_copy/    # Copias de los archivos .torrent (opcional)
+        ├── movies/
+        ├── tv/
+        └── torrents_copy/    # Copias de los archivos .torrent (opcional).
 ```
 
-> 💡 Usar **hardlinks** (en lugar de copias) permite que qBittorrent siga seedando desde `torrents/` mientras Jellyfin sirve el archivo desde `media/`, sin ocupar espacio adicional. Para que esto funcione, `content/` debe estar en el mismo sistema de ficheros.
-
-### Configuración en Radarr / Sonarr
-
-En la configuración de Radarr y Sonarr, las rutas deben apuntar a las carpetas dentro de `/data` (como se monta en el contenedor):
-
-| Servicio | Carpeta raíz de descargas | Carpeta raíz de la biblioteca |
-|---|---|---|
-| Radarr | `/data/torrents/movies` | `/data/media/movies` |
-| Sonarr | `/data/torrents/tv` | `/data/media/series` |
-
-## 🌐 Red
-
-Todos los servicios comparten la red `media-network` (bridge), lo que permite la comunicación entre contenedores usando el nombre del contenedor como hostname (p. ej. `http://radarr:7878`).
+## 🌐 Comunicación entre servicios
+ 
+Todos los contenedores comparten la red `media-network` (bridge de Docker). Esto permite que se comuniquen entre sí usando el **nombre del contenedor como hostname**, sin exponer puertos innecesarios al exterior.
 
 ---
 
-## 📋 Variables de entorno comunes
+## 🔄 Flujo del stack
+ 
+El stack funciona como un pipeline automatizado de extremo a extremo: desde que el usuario solicita contenido hasta que lo tiene disponible para reproducir en Jellyfin, con subtítulos incluidos y sin intervención manual.
 
-| Variable | Valor | Descripción |
-|---|---|---|
-| `PUID` | `1000` | ID de usuario del proceso |
-| `PGID` | `1000` | ID de grupo del proceso |
-| `TZ` | `Europe/Madrid` | Zona horaria |
+**1. Acceso y enrutamiento**
+ 
+Todo el tráfico externo entra por **Nginx Proxy Manager**, que actúa como proxy inverso con terminación SSL/TLS. Desde ahí se enruta hacia Jellyfin (reproducción) o Seerr (solicitudes).
 
+**2. Solicitud de contenido**
+ 
+El usuario solicita una película o serie a través de **Seerr**. Seerr envía la petición al gestor correspondiente: **Radarr** para películas o **Sonarr** para series.
+
+**3. Búsqueda en indexadores**
+ 
+Radarr y Sonarr consultan a **Prowlarr**, que centraliza todos los indexadores (trackers) y devuelve los resultados disponibles. Prowlarr evita tener que configurar los indexadores por separado en cada aplicación.
+
+**4. Descarga**
+ 
+Radarr o Sonarr envían el torrent seleccionado a **qBittorrent**, que descarga el contenido en:
+ 
+```
+content/
+└── torrents/
+    ├── movies/   ← descargas de Radarr
+    └── tv/       ← descargas de Sonarr
+```
+
+**5. Hardlink a la biblioteca**
+ 
+Una vez completa la descarga, Radarr y Sonarr crean un **hardlink** del archivo desde `torrents/` hacia `media/`:
+ 
+```
+content/
+└── media/
+    ├── movies/   ← hardlink desde torrents/movies/
+    └── series/   ← hardlink desde torrents/tv/
+```
+ 
+> 💡 El hardlink apunta al mismo inode en disco, por lo que **no ocupa espacio adicional**. qBittorrent puede seguir sedeando desde `torrents/` mientras Jellyfin sirve el archivo desde `media/`. Para que los hardlinks funcionen, `torrents/` y `media/` deben estar en el **mismo sistema de ficheros** (ambas cuelgan de `content/`).
+
+**7. Reproducción**
+ 
+**Jellyfin** sirve el contenido desde `media/` al usuario final a través de Nginx, con los subtítulos ya disponibles.
+ 
 ---
+ 
+### Caso especial: series en emisión (opcional)
+ 
+La carpeta `content/media/MiRSS/` contiene series en emisión que se descargan automáticamente en cuanto se publica un nuevo capítulo en el tracker, sin necesidad de solicitud manual. Jellyfin la incluye como parte de su biblioteca de series.
+ 
