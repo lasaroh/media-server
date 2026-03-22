@@ -15,8 +15,8 @@ Un stack completo de servidor multimedia autohospedado basado en Docker, con ges
 | **Bazarr** | `lscr.io/linuxserver/bazarr` | `6767` | Descarga automática de subtítulos |
 | **qBittorrent** | `lscr.io/linuxserver/qbittorrent` | `8080` | Cliente de torrents |
 | **Nginx Proxy Manager** | `jc21/nginx-proxy-manager` | `80`, `443`, `81` | Proxy inverso con soporte SSL/TLS |
-| **Homepage** | `ghcr.io/gethomepage/homepage` | `3000` | Dashboard de inicio unificado |
 | **Seerr** | `ghcr.io/seerr-team/seerr` | `5056` | Portal de solicitudes de contenido |
+| **Homepage** | `ghcr.io/gethomepage/homepage` | `3000` | Dashboard de inicio unificado |
 
 ---
 
