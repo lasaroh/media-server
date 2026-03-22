@@ -44,19 +44,6 @@ media-server/
         ├── movies/           # Descargas de películas en curso (Radarr)
         ├── tv/               # Descargas de series en curso (Sonarr)
         └── torrents_copy/    # Copias de los archivos .torrent (opcional)
-
----
-
-### Flujo de un archivo
-
-```
-qBittorrent descarga → content/torrents/movies/
-                                ↓
-                       Radarr detecta descarga completada
-                                ↓
-                       Hardlink / move → content/media/movies/
-                                ↓
-                       Jellyfin escanea y añade a la biblioteca
 ```
 
 > 💡 Usar **hardlinks** (en lugar de copias) permite que qBittorrent siga seedando desde `torrents/` mientras Jellyfin sirve el archivo desde `media/`, sin ocupar espacio adicional. Para que esto funcione, `content/` debe estar en el mismo sistema de ficheros.
@@ -70,97 +57,9 @@ En la configuración de Radarr y Sonarr, las rutas deben apuntar a las carpetas 
 | Radarr | `/data/torrents/movies` | `/data/media/movies` |
 | Sonarr | `/data/torrents/tv` | `/data/media/series` |
 
----
-
-## 🚀 Despliegue
-
-### Requisitos previos
-
-- [Docker](https://docs.docker.com/engine/install/) y [Docker Compose](https://docs.docker.com/compose/install/) instalados
-- Puertos `80`, `443`, `8096`, `7878`, `8989`, `9696`, `6767`, `8080`, `3000`, `5056` disponibles en el host
-
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/tu-usuario/media-server.git
-cd media-server
-```
-
-### 2. Crear la estructura de directorios
-
-```bash
-mkdir -p configuration/{jellyfin/library,radarr,sonarr,prowlarr,bazarr,qbittorrent,nginx/{data,letsencrypt},homepage/config,seerr/config}
-mkdir -p content/media/{movies,series}
-mkdir -p content/torrents/{movies,tv,torrents_copy}
-```
-
-### 3. Ajustar permisos (opcional)
-
-Los contenedores usan `PUID=1000` y `PGID=1000`. Asegúrate de que tu usuario tiene ese UID/GID o ajusta los valores en el `docker-compose.yml`:
-
-```bash
-id tu-usuario
-# uid=1000(tu-usuario) gid=1000(tu-usuario) ...
-```
-
-### 4. Levantar el stack
-
-```bash
-docker compose up -d
-```
-
-### 5. Verificar que todo está corriendo
-
-```bash
-docker compose ps
-```
-
----
-
-## ⚙️ Configuración inicial
-
-### Nginx Proxy Manager
-Accede a `http://IP_DEL_SERVIDOR:81` con las credenciales por defecto:
-- **Email:** `admin@example.com`
-- **Contraseña:** `changeme`
-
-> ⚠️ Cambia las credenciales inmediatamente tras el primer acceso.
-
-### qBittorrent
-Accede a `http://IP_DEL_SERVIDOR:8080`. La contraseña temporal se muestra en los logs:
-
-```bash
-docker logs qbittorrent | grep "temporary password"
-```
-
-### Flujo de integración recomendado
-1. **Prowlarr** → añade indexadores
-2. **Radarr / Sonarr** → conecta con Prowlarr y qBittorrent
-3. **Bazarr** → conecta con Sonarr y Radarr para subtítulos
-4. **Jellyfin** → apunta la biblioteca a `/data`
-5. **Seerr** → conecta con Jellyfin, Radarr y Sonarr
-6. **Homepage** → configura widgets para cada servicio
-
----
-
 ## 🌐 Red
 
 Todos los servicios comparten la red `media-network` (bridge), lo que permite la comunicación entre contenedores usando el nombre del contenedor como hostname (p. ej. `http://radarr:7878`).
-
----
-
-## 🔄 Actualización
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-Para limpiar imágenes antiguas:
-
-```bash
-docker image prune -f
-```
 
 ---
 
@@ -173,13 +72,3 @@ docker image prune -f
 | `TZ` | `Europe/Madrid` | Zona horaria |
 
 ---
-
-## 🛑 Parar el stack
-
-```bash
-# Parar sin eliminar contenedores
-docker compose stop
-
-# Parar y eliminar contenedores (los datos persisten en los volúmenes)
-docker compose down
-```
