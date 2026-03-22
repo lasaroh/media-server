@@ -25,49 +25,27 @@ Un stack completo de servidor multimedia autohospedado basado en Docker, con ges
 ```
 media-server/
 ├── docker-compose.yml
-├── configuration/
+├── configuration/            # Configuración de los servicios
 │   ├── jellyfin/
-│   │   └── library/          # Configuración y base de datos de Jellyfin
-│   ├── radarr/               # Configuración de Radarr
-│   ├── sonarr/               # Configuración de Sonarr
-│   ├── prowlarr/             # Configuración de Prowlarr
-│   ├── bazarr/               # Configuración de Bazarr
-│   ├── qbittorrent/          # Configuración de qBittorrent
+│   ├── radarr/
+│   ├── sonarr/
+│   ├── prowlarr/
+│   ├── bazarr/
+│   ├── qbittorrent/
 │   ├── nginx/
-│   │   ├── data/             # Datos de Nginx Proxy Manager
-│   │   └── letsencrypt/      # Certificados SSL
 │   ├── homepage/
-│   │   └── config/           # Configuración del dashboard desde services.yml
 │   └── seerr/
-│       └── config/           # Configuración de Seerr
 └── content/
-    ├── media/
+    ├── media/                # Sonarr & Radarr se encargan de hacer un hardlink a esta carpeta
     │   ├── movies/           # Películas (biblioteca leída desde Jellyfin)
     │   └── series/           # Series (biblioteca leída desde Jellyfin)
-    └── torrents/
+    |   └── MiRSS/            # Serie en emisión que descarga los nuevos capítulos en cuanto se publican en el tracker
+    └── torrents/             # Carpeta donde qbittorrent descarga el contenido y lo sedea a otros usuarios del enjambre.
         ├── movies/           # Descargas de películas en curso (Radarr)
         ├── tv/               # Descargas de series en curso (Sonarr)
         └── torrents_copy/    # Copias de los archivos .torrent (opcional)
-```
-
-> ⚠️ Es importante respetar esta estructura para que los volúmenes monten correctamente.
 
 ---
-
-## 📁 Directorio `content`
-
-El directorio `content/` es el corazón del stack. Radarr y Sonarr lo montan como `/data`, por lo que tienen visibilidad completa de las descargas y la biblioteca final — lo que permite el **hardlink** entre ambas ubicaciones sin duplicar espacio en disco.
-
-```
-content/
-├── media/
-│   ├── movies/        ← Biblioteca final de películas → Jellyfin
-│   └── series/        ← Biblioteca final de series   → Jellyfin
-└── torrents/
-    ├── movies/        ← Radarr descarga aquí via qBittorrent
-    ├── tv/            ← Sonarr descarga aquí via qBittorrent
-    └── torrents_copy/ ← Copias de los archivos .torrent (opcional)
-```
 
 ### Flujo de un archivo
 
