@@ -39,7 +39,6 @@ media-server/
     ├── media/                # Biblioteca de medios consumida por Jellyfin.
     │   ├── movies/
     │   └── series/
-    |   └── MiRSS/
     └── torrents/             # Carpeta donde qbittorrent descarga el contenido y lo sedea a otros usuarios del enjambre.
         ├── movies/
         ├── tv/
@@ -95,10 +94,3 @@ content/
 **7. Reproducción**
  
 **Jellyfin** sirve el contenido desde `media/` al usuario final a través de Nginx, con los subtítulos ya disponibles.
- 
----
- 
-### Caso especial: series en emisión (opcional)
- 
-La carpeta `content/media/MiRSS/` contiene series en emisión que se descargan automáticamente en cuanto se publica un nuevo capítulo en el tracker, sin necesidad de solicitud manual. Jellyfin la incluye como parte de su biblioteca de series.
- 
