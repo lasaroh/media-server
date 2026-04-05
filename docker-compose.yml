@@ -48,7 +48,7 @@ services:
       - media-network
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:2.3.0.5236-ls139
+    image: lscr.io/linuxserver/prowlarr:2.3.5.5327-ls141
     container_name: prowlarr
     environment:
       - PUID=1000
